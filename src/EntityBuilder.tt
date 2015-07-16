@@ -1,0 +1,191 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Configuration" #>
+<#@ assembly name="$(ProjectDir)$(OutDir)EntityTemplate.dll" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Configuration" #>
+<#@ output extension=".cs" #>
+<#
+	configFilePath = @"";
+	connectionStringConfigName = "ConnectionString";
+	databaseName = "JobCollector";
+	entityNamespace = "EntityTemplate";
+
+	var tables = this.GetDbTables();
+#>
+// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="EntityBuilder.cs" company="pzcast">
+//   (C) 2015 pzcast. All rights reserved.
+// </copyright>
+// <summary>
+//   The entity builder.
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace <#=this.entityNamespace #>
+{
+    using System;
+    using EntityTemplate.Attributes;
+    <# foreach (EntityTemplate.DbTable table in tables) { #>
+
+    /// <summary>
+    /// <#=table.Description #>.
+    /// </summary>
+    [Table("<#=table.Name #>")]
+    public class <#=table.ClassName #>
+    {
+        #region Public Properties
+        <# foreach (EntityTemplate.DbColumn column in table.Columns) { #>
+
+        /// <summary>
+        /// 获取或设置<#=column.Description #>.
+        /// </summary>
+        <# if (column.IsPrimaryKey) { #>
+[PrimaryKey(<#=column.IsIdentityColumn ? "true" : "false" #>)]
+        public <#=column.PropertyType #><#=this.CheckNullable(column) #> <#=column.Name #> { get; <#= column.IsIdentityColumn ? "private set;" : "set;"#> }
+<# } else { #>
+<# if (column.AllowEmpty) { #>
+public <#=column.PropertyType #><#=this.CheckNullable(column) #> <#=column.Name #> { get; set; }
+<# } else { #>
+[NotNull]
+        public <#=column.PropertyType #><#=this.CheckNullable(column) #> <#=column.Name #> { get; set; }
+<# } #>
+<# } #>
+<# } #>
+        
+        #endregion
+    }
+<# } #>
+}
+<#+	
+	string configFilePath = "";
+	string connectionStringConfigName = "";
+	string connectionString;
+	string databaseName;
+	string providerName;
+	string entityNamespace = "";
+
+	public string ConnectionString
+	{
+		get
+		{
+			if (string.IsNullOrEmpty(this.connectionString))
+            {
+				this.InitConnectionString();
+            }
+
+			return this.connectionString;
+		}
+	}
+
+	private EntityTemplate.DbTableCollection GetDbTables()
+	{
+		EntityTemplate.IDbSchemaProvider schemaProvider = new EntityTemplate.SqlClient.SqlSchemaProvider();
+		return schemaProvider.GetDbTableCollection(this.ConnectionString, this.databaseName, true);
+	}
+
+	private string CheckNullable(EntityTemplate.DbColumn column)
+	{
+		string result = string.Empty;
+
+		if(column.AllowEmpty && column.PropertyType !="byte[]" && column.PropertyType !="string")
+        {
+			result= "?";
+        }
+
+		return result;
+	}
+
+	private void InitConnectionString()
+	{
+		string result = "";
+
+		ExeConfigurationFileMap configFile = new ExeConfigurationFileMap();
+		configFile.ExeConfigFilename = GetConfigFilePath();
+
+		if (!string.IsNullOrEmpty(configFile.ExeConfigFilename))
+        {
+			var configuration = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(configFile, ConfigurationUserLevel.None);
+			var connectionStringSection = configuration.ConnectionStrings;
+			
+			if(!string.IsNullOrEmpty(this.connectionStringConfigName))
+			{
+				try
+				{
+					result = connectionStringSection.ConnectionStrings[this.connectionStringConfigName].ConnectionString;
+					this.providerName = connectionStringSection.ConnectionStrings[this.connectionStringConfigName].ProviderName;
+				}
+				catch
+				{
+				}
+			}
+			else
+			{
+				int index = connectionStringSection.ConnectionStrings.Count - 1;
+				this.connectionStringConfigName = connectionStringSection.ConnectionStrings[index].Name;
+
+				result = connectionStringSection.ConnectionStrings[index].ConnectionString;
+				this.providerName = connectionStringSection.ConnectionStrings[index].ProviderName;
+			}
+        }
+
+		this.connectionString = result;
+	}
+
+	private string GetConfigFilePath()
+	{
+		if (!string.IsNullOrEmpty(this.configFilePath))
+		{
+			return this.Host.ResolvePath(this.configFilePath);
+		}
+
+		EnvDTE.Project project = this.GetCurrentApp();
+		if (project != null)
+		{
+			foreach(EnvDTE.ProjectItem projectItem in project.ProjectItems)
+			{
+				if (projectItem.Name.Equals("App.config", StringComparison.InvariantCultureIgnoreCase) || projectItem.Name.Equals("Web.config", StringComparison.InvariantCultureIgnoreCase))
+				{
+					return GetCurrentAppPath() + "\\" + projectItem.Name;
+				}
+			}
+		}
+
+		return string.Empty;
+	}
+
+	private EnvDTE.Project GetCurrentApp()
+	{
+		IServiceProvider serviceProvider = (IServiceProvider)this.Host;
+		if (serviceProvider != null)
+        {
+			EnvDTE.DTE dte = (EnvDTE.DTE)serviceProvider.GetService(typeof(EnvDTE.DTE));
+			if (dte != null)
+			{
+				Array activeSolutionProjects = (Array)dte.ActiveSolutionProjects;
+				if (activeSolutionProjects != null)
+				{
+					return (EnvDTE.Project)activeSolutionProjects.GetValue(0);
+				}
+			}
+        }
+
+		return null;
+	}
+
+	private string GetCurrentAppPath()
+	{
+		EnvDTE.Project project = GetCurrentApp();
+		if (project != null)
+        {
+			var fileInfo = new System.IO.FileInfo(project.FullName);
+			return fileInfo.Directory.FullName;
+        }
+
+		return string.Empty;
+	}
+#>

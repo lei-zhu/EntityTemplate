@@ -1,0 +1,7 @@
+C:\Users\Zhulei\Desktop\EntityTemplate\obj\Debug\EntityTemplate.csprojResolveAssemblyReference.cache
+C:\Users\Zhulei\Desktop\EntityTemplate\src\obj\Debug\EntityTemplate.csprojResolveAssemblyReference.cache
+C:\Users\Zhulei\Desktop\EntityTemplate\src\bin\Debug\EntityTemplate.dll
+C:\Users\Zhulei\Desktop\EntityTemplate\src\bin\Debug\EntityTemplate.pdb
+C:\Users\Zhulei\Desktop\EntityTemplate\src\obj\Debug\EntityTemplate.dll
+C:\Users\Zhulei\Desktop\EntityTemplate\src\obj\Debug\EntityTemplate.pdb
+C:\Users\Zhulei\Desktop\EntityTemplate\src\bin\Debug\EntityTemplate.dll.config
